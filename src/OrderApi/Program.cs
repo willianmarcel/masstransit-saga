@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 var massTransitSettingSection = builder.Configuration.GetSection("MassTransitConfig");
 var massTransitConfig = massTransitSettingSection.Get<MassTransitConfig>();
 
-builder.Services.AddDbContext<OrderDbContext>(options => options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+builder.Services.AddDbContext<OrderDbContext>(options => options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddMassTransit(x =>
 {
@@ -32,13 +32,14 @@ builder.Services.AddMassTransit(x =>
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.ConfigureEndpoints(context);
-        cfg.Host(massTransitConfig.Host, massTransitConfig.VirtualHost,
-            h =>
-            {
-                h.Username(massTransitConfig.Username);
-                h.Password(massTransitConfig.Password);
-            }
-        );
+        //cfg.Host(massTransitConfig.Host, massTransitConfig.VirtualHost,
+        //    h =>
+        //    {
+        //        h.Username(massTransitConfig.Username);
+        //        h.Password(massTransitConfig.Password);
+        //    }
+        //);
+        cfg.Host("amqp://guest:guest@localhost:5672");
     });
 });
 
@@ -48,15 +49,14 @@ builder.Services.AddScoped<OrderTransactionSubmittedActivity>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApiDocument(cfg => cfg.PostProcess = d => d.Info.Title = "Order Api");
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseOpenApi();
+    app.UseSwaggerUi3();
 }
 
 app.UseAuthorization();
